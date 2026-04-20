@@ -11,3 +11,4 @@ vite.config.js
 vite.config.d.ts
 .vercel
 package-lock.json
+.env*.local
