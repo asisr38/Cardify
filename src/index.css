@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm editorial palette — cream surface, ink navy, ember accent */
+    --background: 42 48% 94%;
+    --foreground: 208 35% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 208 35% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 208 35% 13%;
+
+    --primary: 208 35% 13%;
+    --primary-foreground: 42 48% 96%;
+
+    --secondary: 42 35% 88%;
+    --secondary-foreground: 208 35% 13%;
+
+    --muted: 42 28% 90%;
+    --muted-foreground: 210 10% 45%;
+
+    --accent: 17 65% 47%;
+    --accent-foreground: 42 48% 96%;
+
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 42 48% 96%;
+
+    --border: 42 20% 84%;
+    --input: 42 20% 84%;
+    --ring: 208 35% 13%;
+
+    --ember: 17 65% 47%;
+    --ember-foreground: 42 48% 96%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 208 35% 10%;
+    --foreground: 42 48% 94%;
+    --card: 208 30% 14%;
+    --card-foreground: 42 48% 94%;
+    --popover: 208 30% 14%;
+    --popover-foreground: 42 48% 94%;
+    --primary: 42 48% 94%;
+    --primary-foreground: 208 35% 13%;
+    --secondary: 208 25% 18%;
+    --secondary-foreground: 42 48% 94%;
+    --muted: 208 25% 18%;
+    --muted-foreground: 210 10% 65%;
+    --accent: 17 65% 55%;
+    --accent-foreground: 208 35% 13%;
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 42 48% 94%;
+    --border: 208 25% 22%;
+    --input: 208 25% 22%;
+    --ring: 42 48% 94%;
+    --ember: 17 65% 55%;
+    --ember-foreground: 208 35% 13%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-serif tracking-tight;
+  }
+
+  button {
+    @apply select-none;
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply mx-auto w-full max-w-[430px] min-h-screen bg-background relative;
+  }
+
+  .safe-top {
+    padding-top: calc(env(safe-area-inset-top) + 12px);
+  }
+
+  .safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
+  }
+
+  .label-eyebrow {
+    @apply text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
+}
