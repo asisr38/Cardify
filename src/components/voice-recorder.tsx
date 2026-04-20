@@ -2,12 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import { Mic, Square, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-interface Props {
-  onRecorded: (blob: Blob) => void;
+export interface VoiceRecordingResult {
+  blob: Blob;
+  // Live transcript from the Web Speech API. Empty string if the browser
+  // doesn't support it (e.g. Firefox) — caller can then fall back to a
+  // server-side transcription.
+  liveTranscript: string;
 }
 
-// Picks the first MIME type the browser actually supports. Chrome and
-// Firefox prefer webm/opus; Safari only emits mp4.
+interface Props {
+  onRecorded: (result: VoiceRecordingResult) => void;
+}
+
 function pickMimeType(): string | undefined {
   const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
   for (const t of candidates) {
@@ -16,10 +22,24 @@ function pickMimeType(): string | undefined {
   return undefined;
 }
 
+function createSpeechRecognition(): any | null {
+  const Ctor =
+    (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition ?? null;
+  if (!Ctor) return null;
+  const rec = new Ctor();
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.lang = 'en-US';
+  return rec;
+}
+
 export function VoiceRecorder({ onRecorded }: Props) {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const speechRef = useRef<any>(null);
+  const liveRef = useRef<string>('');
+
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -39,7 +59,12 @@ export function VoiceRecorder({ onRecorded }: Props) {
   useEffect(() => {
     return () => {
       streamRef.current?.getTracks().forEach((t) => t.stop());
-      recorderRef.current?.state === 'recording' && recorderRef.current?.stop();
+      if (recorderRef.current?.state === 'recording') recorderRef.current.stop();
+      try {
+        speechRef.current?.stop();
+      } catch {
+        /* noop */
+      }
     };
   }, []);
 
@@ -48,6 +73,31 @@ export function VoiceRecorder({ onRecorded }: Props) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+
+      // Parallel: Web Speech streams interim text while MediaRecorder
+      // captures audio. When it's unsupported (Firefox), liveTranscript
+      // stays empty and the caller can fall back to /api/transcribe.
+      liveRef.current = '';
+      const speech = createSpeechRecognition();
+      if (speech) {
+        speech.onresult = (e: any) => {
+          let transcript = '';
+          for (let i = 0; i < e.results.length; i++) {
+            transcript += e.results[i][0].transcript;
+          }
+          liveRef.current = transcript.trim();
+        };
+        speech.onerror = () => {
+          /* swallow — we still have the audio blob */
+        };
+        try {
+          speech.start();
+        } catch {
+          /* already started */
+        }
+        speechRef.current = speech;
+      }
+
       const mimeType = pickMimeType();
       const rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       chunksRef.current = [];
@@ -55,9 +105,15 @@ export function VoiceRecorder({ onRecorded }: Props) {
       rec.onstop = () => {
         const out = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' });
         setBlob(out);
-        onRecorded(out);
+        onRecorded({ blob: out, liveTranscript: liveRef.current });
         stream.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
+        try {
+          speechRef.current?.stop();
+        } catch {
+          /* noop */
+        }
+        speechRef.current = null;
       };
       rec.start();
       recorderRef.current = rec;
@@ -77,6 +133,7 @@ export function VoiceRecorder({ onRecorded }: Props) {
   const reset = () => {
     setBlob(null);
     setElapsed(0);
+    liveRef.current = '';
   };
 
   if (blob) {

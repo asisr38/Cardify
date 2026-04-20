@@ -16,8 +16,9 @@ import {
 import { useAuth } from '../hooks/use-auth';
 import { useCreateContact } from '../data/contacts';
 import { useEvent } from '../data/events';
-import { api } from '../lib/api';
+import { runOcr, runStructure, runTranscribe } from '../lib/scan-pipeline';
 import { compressImage, randomId, uploadCardScan, uploadVoiceNote } from '../lib/storage';
+import type { VoiceRecordingResult } from '../components/voice-recorder';
 import { errorMessage } from '../lib/utils';
 
 type Step = 'front' | 'back' | 'voice' | 'review';
@@ -71,10 +72,10 @@ export function Scan() {
     return null;
   }, [pipeline.ocrState, pipeline.voiceState]);
 
-  const runOcrPipeline = async (path: string) => {
+  const runOcrPipeline = async (compressedBlob: Blob, path: string) => {
     setPipeline((p) => ({ ...p, ocrState: 'running', ocrError: null }));
     try {
-      const { text } = await api.ocr(path);
+      const { text } = await runOcr(compressedBlob, path);
       if (!text.trim()) {
         setPipeline((p) => ({
           ...p,
@@ -83,23 +84,25 @@ export function Scan() {
         }));
         return;
       }
-      const structured = await api.structure(text);
-      setForm((prev) => mergeFromOcr(prev, structured));
+      const { contact } = await runStructure(text);
+      setForm((prev) => mergeFromOcr(prev, contact));
       setPipeline((p) => ({ ...p, ocrState: 'done' }));
     } catch (err) {
       setPipeline((p) => ({ ...p, ocrState: 'error', ocrError: errorMessage(err) }));
     }
   };
 
-  const runTranscribe = async (path: string) => {
+  const runVoicePipeline = async (path: string | null, liveTranscript: string) => {
     setPipeline((p) => ({ ...p, voiceState: 'running', voiceError: null }));
     try {
-      const { transcript } = await api.transcribe(path);
-      setForm((prev) =>
-        prev.voice_note_transcript
-          ? prev
-          : { ...prev, voice_note_transcript: transcript.trim() },
-      );
+      const { transcript } = await runTranscribe(path, liveTranscript);
+      if (transcript) {
+        setForm((prev) =>
+          prev.voice_note_transcript
+            ? prev
+            : { ...prev, voice_note_transcript: transcript.trim() },
+        );
+      }
       setPipeline((p) => ({ ...p, voiceState: 'done' }));
     } catch (err) {
       setPipeline((p) => ({ ...p, voiceState: 'error', voiceError: errorMessage(err) }));
@@ -111,9 +114,12 @@ export function Scan() {
     setStep('back');
     try {
       const compressed = await compressImage(blob);
+      // Kick OCR off against the local blob immediately — don't wait for
+      // the Storage upload to finish before Tesseract/Vision can start.
+      const ocrTask = runOcrPipeline(compressed, `${user.id}/${pipeline.scanId}/front.jpg`);
       const path = await uploadCardScan(user.id, pipeline.scanId, 'front', compressed);
       setPipeline((p) => ({ ...p, frontPath: path }));
-      runOcrPipeline(path);
+      await ocrTask;
     } catch (err) {
       toast.error(errorMessage(err));
     }
@@ -131,15 +137,17 @@ export function Scan() {
     }
   };
 
-  const handleVoiceRecorded = async (blob: Blob) => {
+  const handleVoiceRecorded = async ({ blob, liveTranscript }: VoiceRecordingResult) => {
     if (!user) return;
     try {
       const voiceId = randomId();
       const path = await uploadVoiceNote(user.id, voiceId, blob);
       setPipeline((p) => ({ ...p, voicePath: path }));
-      runTranscribe(path);
+      runVoicePipeline(path, liveTranscript);
     } catch (err) {
+      // Upload failed but we still have the live transcript — use it.
       toast.error(`Voice upload failed: ${errorMessage(err)}`);
+      runVoicePipeline(null, liveTranscript);
     }
   };
 
