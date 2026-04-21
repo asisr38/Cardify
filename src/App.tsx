@@ -6,10 +6,12 @@ import { Toaster } from './components/ui/sonner';
 import { SignIn } from './pages/sign-in';
 import { AuthCallback } from './pages/auth-callback';
 import { Home } from './pages/home';
+import { Events } from './pages/events';
 import { EventDetail } from './pages/event-detail';
 import { Scan } from './pages/scan';
-import { Contacts } from './pages/contacts';
 import { ContactDetail } from './pages/contact-detail';
+import { EmailComposer } from './pages/email-composer';
+import { Templates } from './pages/templates';
 import { Settings } from './pages/settings';
 
 export default function App() {
@@ -20,10 +22,13 @@ export default function App() {
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Home />} />
+          <Route path="/events" element={<Events />} />
           <Route path="/events/:eventId" element={<EventDetail />} />
           <Route path="/events/:eventId/scan" element={<Scan />} />
-          <Route path="/contacts" element={<Contacts />} />
+          <Route path="/scan" element={<Scan />} />
           <Route path="/contacts/:contactId" element={<ContactDetail />} />
+          <Route path="/contacts/:contactId/compose" element={<EmailComposer />} />
+          <Route path="/templates" element={<Templates />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

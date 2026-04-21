@@ -2,77 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  CardVault — Obsidian dark luxury palette.
+  Warm near-black ground, amber-gold accents, cream text.
+*/
 @layer base {
   :root {
-    /* Warm editorial palette — cream surface, ink navy, ember accent */
-    --background: 42 48% 94%;
-    --foreground: 208 35% 13%;
+    --background: 30 18% 4%;
+    --foreground: 40 54% 89%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 208 35% 13%;
+    --card: 30 16% 9%;
+    --card-foreground: 40 54% 89%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 208 35% 13%;
+    --card-alt: 30 16% 12%;
 
-    --primary: 208 35% 13%;
-    --primary-foreground: 42 48% 96%;
+    --popover: 30 16% 9%;
+    --popover-foreground: 40 54% 89%;
 
-    --secondary: 42 35% 88%;
-    --secondary-foreground: 208 35% 13%;
+    --primary: 40 54% 89%;
+    --primary-foreground: 30 18% 4%;
 
-    --muted: 42 28% 90%;
-    --muted-foreground: 210 10% 45%;
+    --secondary: 30 16% 12%;
+    --secondary-foreground: 40 54% 89%;
 
-    --accent: 17 65% 47%;
-    --accent-foreground: 42 48% 96%;
+    --muted: 30 16% 12%;
+    --muted-foreground: 40 32% 62%;
+    --muted-dim: 40 20% 40%;
 
-    --destructive: 0 72% 45%;
-    --destructive-foreground: 42 48% 96%;
+    --accent: 39 58% 52%;
+    --accent-foreground: 30 18% 4%;
 
-    --border: 42 20% 84%;
-    --input: 42 20% 84%;
-    --ring: 208 35% 13%;
+    --destructive: 0 72% 52%;
+    --destructive-foreground: 40 54% 89%;
 
-    --ember: 17 65% 47%;
-    --ember-foreground: 42 48% 96%;
+    --border: 40 30% 60% / 0.08;
+    --input: 30 16% 14%;
+    --ring: 39 58% 52%;
 
-    --radius: 0.75rem;
+    /* Gold system */
+    --gold: 39 58% 52%;
+    --gold-alt: 39 54% 48%;
+    --gold-dim: 39 30% 28%;
+    --gold-glow: 39 70% 45% / 0.18;
+    --gold-glow-strong: 39 70% 45% / 0.30;
+
+    --radius: 0.875rem;
   }
 
-  .dark {
-    --background: 208 35% 10%;
-    --foreground: 42 48% 94%;
-    --card: 208 30% 14%;
-    --card-foreground: 42 48% 94%;
-    --popover: 208 30% 14%;
-    --popover-foreground: 42 48% 94%;
-    --primary: 42 48% 94%;
-    --primary-foreground: 208 35% 13%;
-    --secondary: 208 25% 18%;
-    --secondary-foreground: 42 48% 94%;
-    --muted: 208 25% 18%;
-    --muted-foreground: 210 10% 65%;
-    --accent: 17 65% 55%;
-    --accent-foreground: 208 35% 13%;
-    --destructive: 0 65% 55%;
-    --destructive-foreground: 42 48% 94%;
-    --border: 208 25% 22%;
-    --input: 208 25% 22%;
-    --ring: 42 48% 94%;
-    --ember: 17 65% 55%;
-    --ember-foreground: 208 35% 13%;
-  }
-}
-
-@layer base {
   * {
-    @apply border-border;
+    border-color: hsl(40 54% 89% / 0.08);
   }
 
   html,
   body,
   #root {
     height: 100%;
+    background-color: hsl(var(--background));
   }
 
   body {
@@ -80,6 +65,10 @@
     font-feature-settings: 'ss01', 'cv11';
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: none;
+    background-image:
+      radial-gradient(ellipse 60% 50% at 20% 80%, rgba(180, 110, 30, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 80% 20%, rgba(180, 110, 30, 0.04) 0%, transparent 60%);
+    background-attachment: fixed;
   }
 
   h1,
@@ -91,24 +80,68 @@
   button {
     @apply select-none;
   }
+
+  input,
+  textarea {
+    caret-color: hsl(var(--gold));
+  }
+
+  textarea {
+    resize: none;
+  }
 }
 
 @layer components {
   .app-shell {
-    @apply mx-auto w-full max-w-[430px] min-h-screen bg-background relative;
+    @apply mx-auto w-full max-w-[430px] min-h-screen relative;
+    background: hsl(var(--background));
   }
 
   .safe-top {
-    padding-top: calc(env(safe-area-inset-top) + 12px);
+    padding-top: calc(env(safe-area-inset-top) + 14px);
   }
 
   .safe-bottom {
-    padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
   }
 
   .label-eyebrow {
-    @apply text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground;
+    @apply text-[10px] font-semibold uppercase tracking-[0.12em];
+    color: hsl(var(--muted-dim));
   }
+
+  .gold-glow {
+    box-shadow: 0 4px 20px hsl(var(--gold-glow));
+  }
+
+  .gold-ring {
+    box-shadow: 0 0 0 1px hsl(var(--gold) / 0.22), 0 6px 24px hsl(var(--gold-glow));
+  }
+}
+
+@keyframes scanLine {
+  0%   { top: 10%; opacity: 1; }
+  100% { top: 90%; opacity: 0.2; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 hsl(var(--gold) / 0.4); }
+  50%      { opacity: 0.7; box-shadow: 0 0 0 6px hsl(var(--gold) / 0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 
 ::-webkit-scrollbar {

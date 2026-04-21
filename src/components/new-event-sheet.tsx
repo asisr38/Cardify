@@ -138,7 +138,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       aria-checked={checked}
       onClick={() => onChange(!checked)}
       className={`relative h-6 w-11 rounded-full transition-colors ${
-        checked ? 'bg-ember' : 'bg-muted'
+        checked ? 'bg-gold' : 'bg-muted'
       }`}
     >
       <span

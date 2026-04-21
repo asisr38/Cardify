@@ -256,7 +256,7 @@ export function Scan() {
       />
 
       {processingBanner && (
-        <div className="mx-5 mb-3 flex items-center gap-2 rounded-xl border border-ember/20 bg-ember/5 px-3 py-2 text-xs text-ember">
+        <div className="mx-5 mb-3 flex items-center gap-2 rounded-xl border border-gold/20 bg-gold/5 px-3 py-2 text-xs text-gold">
           <Loader2 size={14} className="animate-spin" /> {processingBanner}
         </div>
       )}
@@ -289,7 +289,7 @@ export function Scan() {
         <Button
           className="mt-5 w-full"
           size="lg"
-          variant="ember"
+          variant="gold"
           onClick={handleSave}
           disabled={createContact.isPending}
         >

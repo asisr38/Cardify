@@ -83,9 +83,53 @@ export function CameraCapture({ onCapture, onCancel }: Props) {
         muted
         className="h-full w-full bg-black object-cover"
       />
-      {/* Framing guide */}
+      {/* Vignette */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 80% 80% at 50% 50%, transparent 50%, rgba(0,0,0,0.6) 100%)',
+        }}
+      />
+
+      {/* Framing guide — gold corner brackets */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="aspect-[1.586/1] w-[85%] rounded-xl border-2 border-white/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
+        <div className="relative aspect-[1.586/1] w-[80%]">
+          {(
+            [
+              { top: 0, left: 0, bt: true, bl: true },
+              { top: 0, right: 0, bt: true, br: true },
+              { bottom: 0, left: 0, bb: true, bl: true },
+              { bottom: 0, right: 0, bb: true, br: true },
+            ] as Array<{
+              top?: number;
+              bottom?: number;
+              left?: number;
+              right?: number;
+              bt?: boolean;
+              bb?: boolean;
+              bl?: boolean;
+              br?: boolean;
+            }>
+          ).map((pos, i) => (
+            <div
+              key={i}
+              className="absolute h-6 w-6"
+              style={{
+                top: pos.top,
+                bottom: pos.bottom,
+                left: pos.left,
+                right: pos.right,
+                borderTop: pos.bt ? '2px solid hsl(var(--gold))' : undefined,
+                borderBottom: pos.bb ? '2px solid hsl(var(--gold))' : undefined,
+                borderLeft: pos.bl ? '2px solid hsl(var(--gold))' : undefined,
+                borderRight: pos.br ? '2px solid hsl(var(--gold))' : undefined,
+              }}
+            />
+          ))}
+          {/* Dashed interior hint */}
+          <div className="absolute inset-2.5 rounded-md border border-dashed border-gold/20" />
+        </div>
       </div>
 
       <div
@@ -102,9 +146,9 @@ export function CameraCapture({ onCapture, onCancel }: Props) {
           onClick={snap}
           disabled={!ready}
           aria-label="Capture"
-          className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-white/20 backdrop-blur transition-transform active:scale-95 disabled:opacity-50"
+          className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-gold bg-gold/20 backdrop-blur transition-transform active:scale-95 disabled:opacity-50"
         >
-          <div className="h-12 w-12 rounded-full bg-white" />
+          <div className="h-12 w-12 rounded-full bg-gold shadow-gold" />
         </button>
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white/70">
           <RefreshCw size={14} />

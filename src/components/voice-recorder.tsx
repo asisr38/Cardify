@@ -142,7 +142,7 @@ export function VoiceRecorder({ onRecorded }: Props) {
     const ss = (elapsed % 60).toString().padStart(2, '0');
     return (
       <div className="flex flex-col items-center gap-4">
-        <div className="text-xs uppercase tracking-[0.12em] text-ember">Recorded · {mm}:{ss}</div>
+        <div className="text-xs uppercase tracking-[0.12em] text-gold">Recorded · {mm}:{ss}</div>
         <audio controls src={url} className="w-full max-w-xs" />
         <button
           onClick={reset}
@@ -163,7 +163,7 @@ export function VoiceRecorder({ onRecorded }: Props) {
           'flex h-20 w-20 items-center justify-center rounded-full transition-transform active:scale-95',
           recording
             ? 'bg-destructive text-destructive-foreground shadow-lift animate-pulse'
-            : 'bg-ember text-ember-foreground shadow-lift',
+            : 'bg-gold text-background shadow-gold-lg',
         )}
       >
         {recording ? <Square size={28} fill="currentColor" /> : <Mic size={28} />}

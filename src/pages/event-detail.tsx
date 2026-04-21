@@ -86,8 +86,8 @@ export function EventDetail() {
               )}
             </div>
             {event.is_active ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-ember/20 bg-ember/10 px-2 py-0.5 text-xs font-medium text-ember">
-                <span className="h-1.5 w-1.5 rounded-full bg-ember" />
+              <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold">
+                <span className="h-1.5 w-1.5 rounded-full bg-gold" />
                 Active
               </span>
             ) : (
@@ -195,7 +195,7 @@ export function EventDetail() {
 function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
     <div className="text-center">
-      <div className={`font-serif text-[28px] leading-none ${accent ? 'text-ember' : 'text-foreground'}`}>
+      <div className={`font-serif text-[28px] leading-none ${accent ? 'text-gold' : 'text-foreground'}`}>
         {value}
       </div>
       <div className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
@@ -206,7 +206,7 @@ function Stat({ label, value, accent }: { label: string; value: number; accent?:
 function EmptyPeople() {
   return (
     <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
-      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-ember/10 text-ember">
+      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-gold/10 text-gold">
         <Coffee size={22} />
       </div>
       <h3 className="mb-1 font-serif text-xl">Quiet so far.</h3>
@@ -228,7 +228,7 @@ function FixedActions({ onAdd, onScan }: { onAdd: () => void; onScan: () => void
           <UserPlus />
           Add manually
         </Button>
-        <Button variant="ember" size="lg" className="shadow-lift" onClick={onScan}>
+        <Button variant="gold" size="lg" className="shadow-gold-lg" onClick={onScan}>
           <Camera />
           Scan card
         </Button>

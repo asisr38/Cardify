@@ -1,23 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Mail,
-  Phone,
-  Globe,
-  Linkedin,
-  MapPin,
-  Quote,
+  Loader2,
   Pencil,
   Trash2,
   Check,
   X,
-  Loader2,
-  MessageSquare,
+  ArrowRight,
 } from 'lucide-react';
-import { TopBar } from '../components/top-bar';
-import { Button } from '../components/ui/button';
-import { Avatar } from '../components/avatar';
+import { ScreenBack } from '../components/screen-back';
+import { CardThumbnail } from '../components/card-thumbnail';
 import { StatusBadge } from '../components/status-badge';
+import { Button } from '../components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,12 +29,19 @@ import {
   formToInsertPatch,
   useContactForm,
 } from '../components/contact-form';
-import { useContact, useDeleteContact, useSetFollowUpStatus, useUpdateContact } from '../data/contacts';
+import {
+  useContact,
+  useDeleteContact,
+  useSetFollowUpStatus,
+  useUpdateContact,
+} from '../data/contacts';
 import { useEvent } from '../data/events';
 import { useInteractions } from '../data/interactions';
-import { formatDate, errorMessage } from '../lib/utils';
+import { formatDate, errorMessage, cn } from '../lib/utils';
 import { toast } from 'sonner';
 import type { FollowUpStatus } from '../types/database';
+
+type Tab = 'info' | 'notes' | 'activity';
 
 export function ContactDetail() {
   const { contactId } = useParams<{ contactId: string }>();
@@ -51,6 +53,7 @@ export function ContactDetail() {
   const deleteContact = useDeleteContact();
   const setStatus = useSetFollowUpStatus();
 
+  const [tab, setTab] = useState<Tab>('info');
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { form, setForm, set } = useContactForm();
@@ -62,7 +65,9 @@ export function ContactDetail() {
   if (isLoading) {
     return (
       <div className="app-shell">
-        <TopBar back />
+        <div className="safe-top px-5">
+          <ScreenBack label="Contacts" onClick={() => navigate('/')} />
+        </div>
         <div className="flex items-center justify-center py-16 text-muted-foreground">
           <Loader2 className="animate-spin" />
         </div>
@@ -73,7 +78,9 @@ export function ContactDetail() {
   if (!contact) {
     return (
       <div className="app-shell">
-        <TopBar back title="Contact" />
+        <div className="safe-top px-5">
+          <ScreenBack label="Contacts" onClick={() => navigate('/')} />
+        </div>
         <div className="px-5 py-10 text-center text-muted-foreground">
           This contact has been removed.
         </div>
@@ -98,20 +105,20 @@ export function ContactDetail() {
     }
   };
 
-  const handleStatus = async (status: FollowUpStatus) => {
+  const handleStatus = async (s: FollowUpStatus) => {
     try {
-      await setStatus.mutateAsync({ id: contact.id, status });
+      await setStatus.mutateAsync({ id: contact.id, status: s });
     } catch (err) {
       toast.error(errorMessage(err));
     }
   };
 
   return (
-    <div className="app-shell safe-bottom">
-      <TopBar
-        back
-        right={
-          editing ? (
+    <div className="app-shell flex flex-col" style={{ minHeight: '100svh' }}>
+      <header className="safe-top flex items-center justify-between gap-2 px-5">
+        <ScreenBack label="Contacts" onClick={() => navigate('/')} />
+        <div className="flex items-center gap-1">
+          {editing ? (
             <>
               <button
                 onClick={() => {
@@ -119,11 +126,11 @@ export function ContactDetail() {
                   setEditing(false);
                 }}
                 aria-label="Cancel"
-                className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-card-alt"
               >
                 <X size={18} />
               </button>
-              <Button size="sm" onClick={handleSave} disabled={updateContact.isPending}>
+              <Button size="sm" variant="gold" onClick={handleSave} disabled={updateContact.isPending}>
                 <Check size={14} />
                 Save
               </Button>
@@ -133,7 +140,7 @@ export function ContactDetail() {
               <button
                 onClick={() => setEditing(true)}
                 aria-label="Edit"
-                className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-card-alt"
               >
                 <Pencil size={16} />
               </button>
@@ -145,133 +152,168 @@ export function ContactDetail() {
                 <Trash2 size={16} />
               </button>
             </>
-          )
-        }
-      />
+          )}
+        </div>
+      </header>
 
-      <section className="px-5">
-        <div className="mb-6 flex items-center gap-4">
-          <Avatar name={contact.full_name} size="lg" />
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate font-serif text-[26px] leading-tight">{contact.full_name}</h1>
-            <div className="mt-0.5 truncate text-[13px] text-muted-foreground">
-              {contact.title ?? ''}
-              {contact.title && contact.company ? ' · ' : ''}
-              {contact.company ?? ''}
-            </div>
-            <div className="mt-2">
-              <StatusBadge status={contact.follow_up_status} />
-            </div>
+      <div className="flex flex-col px-5 pb-4">
+        <div className="flex justify-center pt-3">
+          <CardThumbnail
+            name={contact.full_name}
+            title={contact.title}
+            company={contact.company}
+            website={contact.website}
+            seed={contact.id}
+            size="lg"
+            selected
+          />
+        </div>
+        <div className="mt-3.5">
+          <h1 className="mb-[3px] font-serif text-[24px] font-bold tracking-tight">
+            {contact.full_name}
+          </h1>
+          <div className="text-[14px] text-muted-foreground">
+            {contact.title ?? ''}
+            {contact.title && contact.company ? ' · ' : ''}
+            {contact.company ?? ''}
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <StatusBadge status={contact.follow_up_status} />
+            {event && <span className="text-[11px] text-muted-dim">{event.name}</span>}
           </div>
         </div>
+      </div>
 
-        {event && (
-          <Link
-            to={`/events/${event.id}`}
-            className="mb-4 flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 shadow-soft hover:bg-muted/40"
+      <div className="flex border-b border-[hsl(40_54%_89%/0.08)] mx-5">
+        {(['info', 'notes', 'activity'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={cn(
+              'flex-1 border-b-2 pb-2.5 pt-2 text-[13px] capitalize transition-colors -mb-px',
+              tab === t
+                ? 'border-gold font-semibold text-gold'
+                : 'border-transparent text-muted-foreground',
+            )}
           >
-            <div>
-              <div className="label-eyebrow">Captured at</div>
-              <div className="mt-0.5 text-sm font-medium">{event.name}</div>
-            </div>
-            <div className="text-xs text-muted-foreground">{formatDate(event.date)}</div>
-          </Link>
-        )}
+            {t}
+          </button>
+        ))}
+      </div>
 
-        {(contact.voice_note_transcript || editing) && (
-          <div className="relative mb-5 rounded-2xl border border-ember/20 bg-ember/5 p-4">
-            <Quote className="absolute right-3 top-3 text-ember/30" size={28} />
-            <div className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.12em] text-ember">
-              <MessageSquare size={11} />
-              Voice note
-            </div>
-            {editing ? null : (
-              <p className="font-serif text-[17px] italic leading-snug">
-                "{contact.voice_note_transcript}"
-              </p>
+      <div className="flex-1 overflow-y-auto px-5 py-3.5">
+        {tab === 'info' && (
+          <div className="flex flex-col gap-2">
+            {editing ? (
+              <div className="rounded-[14px] border border-[hsl(40_54%_89%/0.08)] bg-card p-4">
+                <ContactFormFields form={form} set={set} />
+              </div>
+            ) : (
+              <>
+                {[
+                  { label: 'Email', value: contact.email },
+                  { label: 'Phone', value: contact.phone },
+                  { label: 'Website', value: contact.website },
+                  { label: 'LinkedIn', value: contact.linkedin },
+                  { label: 'Address', value: contact.address },
+                  { label: 'Event', value: event?.name ?? null },
+                  { label: 'Added', value: formatDate(contact.created_at) },
+                ]
+                  .filter((r) => !!r.value)
+                  .map((r) => (
+                    <div
+                      key={r.label}
+                      className="rounded-xl border border-[hsl(40_54%_89%/0.08)] bg-card px-3.5 py-[11px]"
+                    >
+                      <div className="label-eyebrow mb-0.5">{r.label}</div>
+                      <div className="text-[13.5px] text-foreground">{r.value}</div>
+                    </div>
+                  ))}
+              </>
             )}
           </div>
         )}
 
-        <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-          {editing ? (
-            <div className="p-4">
-              <ContactFormFields form={form} set={set} />
-            </div>
-          ) : (
-            <ul>
-              {contact.email && (
-                <Field icon={<Mail size={16} />} label="Email" value={contact.email} href={`mailto:${contact.email}`} />
-              )}
-              {contact.phone && (
-                <Field icon={<Phone size={16} />} label="Phone" value={contact.phone} href={`tel:${contact.phone}`} />
-              )}
-              {contact.website && (
-                <Field icon={<Globe size={16} />} label="Website" value={contact.website} href={hrefFor(contact.website)} />
-              )}
-              {contact.linkedin && (
-                <Field icon={<Linkedin size={16} />} label="LinkedIn" value={contact.linkedin} href={hrefFor(contact.linkedin)} />
-              )}
-              {contact.address && <Field icon={<MapPin size={16} />} label="Address" value={contact.address} />}
-              {!hasAnyField(contact) && (
-                <div className="p-6 text-center text-sm text-muted-foreground">
-                  No contact details yet. Tap the pencil to add them.
+        {tab === 'notes' && (
+          <div>
+            {contact.voice_note_transcript ? (
+              <div className="rounded-xl border border-gold/30 bg-card p-3.5">
+                <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gold">
+                  Voice Note
                 </div>
+                <p className="text-[13px] leading-[1.55] text-muted-foreground">
+                  "{contact.voice_note_transcript}"
+                </p>
+              </div>
+            ) : (
+              <div className="pt-5 text-center text-xs text-muted-dim">No voice note yet.</div>
+            )}
+            <div className="mt-5 text-center text-xs text-muted-dim">No other notes yet</div>
+          </div>
+        )}
+
+        {tab === 'activity' && (
+          <div>
+            {!interactions || interactions.length === 0 ? (
+              <div className="pt-10 text-center text-[13px] leading-[1.6] text-muted-dim">
+                No activity logged yet.
+                <br />
+                Send a follow-up to start the thread.
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {interactions.map((i) => (
+                  <li
+                    key={i.id}
+                    className="rounded-xl border border-[hsl(40_54%_89%/0.08)] bg-card px-3.5 py-3"
+                  >
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-card-alt px-2 py-0.5 text-[11px] text-muted-foreground">
+                        <Mail size={11} /> {i.type.replace('_', ' ')}
+                      </span>
+                      <span className="text-[11px] text-muted-dim">
+                        {formatDate(i.created_at)}
+                      </span>
+                    </div>
+                    {i.subject && (
+                      <div className="text-[13px] text-foreground">{i.subject}</div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-[hsl(40_54%_89%/0.08)] px-5 pb-28 pt-3">
+        <div className="mb-3 flex gap-1.5">
+          {(['pending', 'sent', 'skipped'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => handleStatus(s)}
+              disabled={setStatus.isPending}
+              className={cn(
+                'flex-1 rounded-lg border px-2 py-1.5 text-[11px] capitalize transition-colors',
+                contact.follow_up_status === s
+                  ? 'border-gold bg-gold/15 text-gold'
+                  : 'border-[hsl(40_54%_89%/0.08)] bg-card text-muted-foreground',
               )}
-            </ul>
-          )}
+            >
+              {s}
+            </button>
+          ))}
         </div>
 
-        <div className="mb-5">
-          <div className="mb-2 flex items-baseline justify-between">
-            <h3 className="font-serif text-lg">Follow-up</h3>
-            <span className="text-xs text-muted-foreground">Status</span>
-          </div>
-          <div className="flex gap-2">
-            {(['pending', 'sent', 'skipped'] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => handleStatus(s)}
-                disabled={setStatus.isPending}
-                className={`flex-1 rounded-xl border px-3 py-2 text-sm capitalize transition-colors ${
-                  contact.follow_up_status === s
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-card text-foreground hover:bg-muted/40'
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-5">
-          <h3 className="mb-2 font-serif text-lg">Interaction history</h3>
-          {!interactions || interactions.length === 0 ? (
-            <div className="rounded-2xl border border-border bg-card p-5 text-center shadow-card">
-              <p className="text-sm text-muted-foreground">No interactions yet. The silence is on you.</p>
-            </div>
-          ) : (
-            <ul className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-              {interactions.map((i, idx) => (
-                <li key={i.id} className={idx > 0 ? 'border-t border-border p-4' : 'p-4'}>
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                      <Mail size={11} /> {i.type.replace('_', ' ')}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{formatDate(i.created_at)}</span>
-                  </div>
-                  {i.subject && <div className="mt-1.5 text-sm">{i.subject}</div>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <p className="pb-4 text-center text-xs text-muted-foreground">
-          Follow-up emails arrive in Milestone 4.
-        </p>
-      </section>
+        <Button
+          variant="gold"
+          size="lg"
+          className="w-full"
+          onClick={() => navigate(`/contacts/${contact.id}/compose`)}
+        >
+          Send follow-up email <ArrowRight size={16} />
+        </Button>
+      </div>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
@@ -289,7 +331,7 @@ export function ContactDetail() {
                 try {
                   await deleteContact.mutateAsync(contact);
                   toast.success('Contact deleted');
-                  navigate(-1);
+                  navigate('/');
                 } catch (err) {
                   toast.error(errorMessage(err));
                 }
@@ -301,57 +343,5 @@ export function ContactDetail() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
-}
-
-function hasAnyField(c: {
-  email: string | null;
-  phone: string | null;
-  website: string | null;
-  linkedin: string | null;
-  address: string | null;
-}) {
-  return !!(c.email || c.phone || c.website || c.linkedin || c.address);
-}
-
-function hrefFor(value: string) {
-  if (!value) return '#';
-  if (/^https?:\/\//i.test(value)) return value;
-  return `https://${value}`;
-}
-
-function Field({
-  icon,
-  label,
-  value,
-  href,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  href?: string;
-}) {
-  const inner = (
-    <>
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-        {icon}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="label-eyebrow">{label}</div>
-        <div className="mt-0.5 truncate text-sm">{value}</div>
-      </div>
-    </>
-  );
-  const cls = 'flex items-center gap-3 p-4 hover:bg-muted/40 active:scale-[0.99]';
-  return (
-    <li className="border-b border-border last:border-b-0">
-      {href ? (
-        <a href={href} className={cls} target="_blank" rel="noreferrer">
-          {inner}
-        </a>
-      ) : (
-        <div className={cls}>{inner}</div>
-      )}
-    </li>
   );
 }

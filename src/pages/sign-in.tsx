@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Mail, Loader2, Check, ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
 import { useAuth } from '../hooks/use-auth';
 import { toast } from 'sonner';
 
@@ -13,96 +12,104 @@ export function SignIn() {
   const from = (location.state as { from?: string } | null)?.from ?? '/';
 
   const [email, setEmail] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [phase, setPhase] = useState<'input' | 'sending' | 'sent'>('input');
 
   if (!loading && session) return <Navigate to={from} replace />;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.includes('@')) {
       toast.error('Enter a valid email');
       return;
     }
-    setSending(true);
+    setPhase('sending');
     const { error } = await signInWithMagicLink(email.trim());
-    setSending(false);
     if (error) {
+      setPhase('input');
       toast.error(error);
       return;
     }
-    setSent(true);
+    setPhase('sent');
   };
 
   return (
-    <div className="app-shell flex flex-col">
-      <div className="safe-top px-6" />
+    <div className="app-shell relative flex flex-col justify-center overflow-hidden px-7">
+      <div
+        className="pointer-events-none absolute -right-20 -bottom-20 h-60 w-60 rounded-full"
+        style={{ background: 'radial-gradient(circle, hsl(var(--gold-glow-strong)) 0%, transparent 70%)' }}
+      />
 
-      <main className="flex flex-1 flex-col px-6 pt-10">
-        <p className="label-eyebrow">CardVault</p>
-        <h1 className="mt-2 font-serif text-[34px] leading-[1.05] tracking-tight">
-          Your <em className="not-italic italic text-ember">rooms</em>,
+      <div className="animate-fade-up">
+        <div
+          className="mb-[22px] flex h-[60px] w-[60px] items-center justify-center rounded-[18px] border border-gold/20 shadow-gold-lg"
+          style={{ background: 'linear-gradient(145deg, hsl(var(--card-alt)), hsl(var(--card)))' }}
+        >
+          <svg width="30" height="22" viewBox="0 0 30 22" fill="none">
+            <rect x="0.75" y="0.75" width="28.5" height="20.5" rx="3" stroke="hsl(var(--gold))" strokeWidth="1.1" />
+            <rect x="3.5" y="3.5" width="8" height="5.5" rx="1.2" fill="hsl(var(--gold))" opacity="0.5" />
+            <rect x="3.5" y="12" width="15" height="1.5" rx="0.75" fill="hsl(var(--gold))" opacity="0.35" />
+            <rect x="3.5" y="15" width="10" height="1.5" rx="0.75" fill="hsl(var(--gold))" opacity="0.25" />
+            <rect x="21" y="3.5" width="5.5" height="5.5" rx="1.2" fill="hsl(var(--gold))" opacity="0.2" />
+          </svg>
+        </div>
+        <h1 className="mb-2.5 font-serif text-[38px] font-bold leading-none tracking-tight">CardVault</h1>
+        <p className="max-w-[24ch] text-[15px] leading-[1.55] text-muted-foreground">
+          Scan cards. Build relationships.
           <br />
-          not your rolodex.
-        </h1>
-        <p className="mt-3 max-w-[32ch] text-sm text-muted-foreground">
-          Sign in with a magic link — no passwords, no friction. One tap from your inbox and you're back in.
+          Never lose a connection.
         </p>
+      </div>
 
-        {sent ? (
-          <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-card animate-slide-up">
-            <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-ember/15 text-ember">
-              <Check size={20} />
-            </div>
-            <h2 className="font-serif text-xl">Check your inbox</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              We sent a sign-in link to <span className="font-medium text-foreground">{email}</span>. It expires in 1 hour.
+      <div className="mt-11">
+        {phase === 'input' && (
+          <form onSubmit={submit} className="animate-fade-up">
+            <div className="label-eyebrow mb-2.5">Sign in with email</div>
+            <Input
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="you@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoFocus
+              required
+              className="mb-2.5"
+            />
+            <Button type="submit" variant="gold" size="lg" className="w-full">
+              Send magic link <ArrowRight size={16} />
+            </Button>
+            <p className="mt-[18px] text-center text-xs leading-[1.7] text-muted-dim">
+              No password needed · GDPR compliant
+              <br />
+              Delete all your data anytime from Settings
             </p>
-            <Button variant="ghost" size="sm" className="mt-4" onClick={() => setSent(false)}>
-              Use a different email
-            </Button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="mt-10 space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Work email</Label>
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                <Input
-                  id="email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="you@company.com"
-                  className="pl-10"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoFocus
-                  required
-                />
-              </div>
-            </div>
-
-            <Button type="submit" size="lg" className="w-full" disabled={sending || !email}>
-              {sending ? (
-                <>
-                  <Loader2 className="animate-spin" />
-                  Sending…
-                </>
-              ) : (
-                <>
-                  Send magic link
-                  <ArrowRight />
-                </>
-              )}
-            </Button>
           </form>
         )}
-      </main>
 
-      <footer className="px-6 pb-10 pt-6 text-center text-xs text-muted-foreground">
-        By signing in, you agree to our terms. Your data stays yours.
-      </footer>
+        {phase === 'sending' && (
+          <div className="animate-fade-in flex items-center justify-center gap-2 text-[15px] text-muted-foreground">
+            <Loader2 size={16} className="animate-spin" /> Sending link…
+          </div>
+        )}
+
+        {phase === 'sent' && (
+          <div className="animate-fade-up text-center">
+            <div className="mb-3.5 text-[44px]">✉️</div>
+            <h2 className="mb-2 font-serif text-[22px]">Check your inbox</h2>
+            <p className="text-sm leading-[1.5] text-muted-foreground">
+              Magic link sent to
+              <br />
+              <span className="text-gold">{email}</span>
+            </p>
+            <button
+              className="mt-6 text-xs text-muted-dim underline-offset-2 hover:underline"
+              onClick={() => setPhase('input')}
+            >
+              Use a different email
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

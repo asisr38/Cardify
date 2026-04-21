@@ -9,14 +9,14 @@ export function Settings() {
   return (
     <div className="app-shell safe-bottom">
       <header className="safe-top px-5 pb-4">
-        <h1 className="font-serif text-[28px] leading-tight">Settings</h1>
+        <h1 className="font-serif text-[30px] font-bold leading-[1.1] tracking-tight">Settings</h1>
       </header>
 
       <section className="space-y-4 px-5">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+        <div className="rounded-[14px] border border-[hsl(40_54%_89%/0.08)] bg-card p-4">
           <p className="label-eyebrow">Account</p>
           <div className="mt-2 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-ember font-serif text-ember-foreground">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold font-serif text-background">
               {(user?.email?.[0] ?? '?').toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -38,8 +38,8 @@ export function Settings() {
           Sign out
         </Button>
 
-        <p className="pt-4 text-center text-xs text-muted-foreground">
-          CardVault · v0.1 · Milestone 1
+        <p className="pt-4 text-center text-xs text-muted-dim">
+          CardVault · v0.1
         </p>
       </section>
     </div>
