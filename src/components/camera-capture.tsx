@@ -76,12 +76,12 @@ export function CameraCapture({ onCapture, onCancel }: Props) {
   }
 
   return (
-    <div className="relative flex-1">
+    <div className="relative flex-1 min-h-0 overflow-hidden">
       <video
         ref={videoRef}
         playsInline
         muted
-        className="h-full w-full bg-black object-cover"
+        className="absolute inset-0 h-full w-full bg-black object-cover"
       />
       {/* Vignette */}
       <div

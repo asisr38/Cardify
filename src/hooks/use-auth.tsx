@@ -7,6 +7,11 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   signInWithMagicLink: (email: string) => Promise<{ error?: string }>;
+  signInWithPassword: (email: string, password: string) => Promise<{ error?: string }>;
+  signUpWithPassword: (
+    email: string,
+    password: string,
+  ) => Promise<{ error?: string; needsConfirmation?: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -47,6 +52,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
         });
         return error ? { error: error.message } : {};
+      },
+      async signInWithPassword(email, password) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        return error ? { error: error.message } : {};
+      },
+      async signUpWithPassword(email, password) {
+        const redirectTo = `${import.meta.env.VITE_SITE_URL || window.location.origin}/auth/callback`;
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: redirectTo },
+        });
+        if (error) return { error: error.message };
+        // If project requires email confirmation, Supabase returns a user with
+        // no session. Signal that to the caller so the UI can prompt them.
+        const needsConfirmation = !data.session;
+        return { needsConfirmation };
       },
       async signOut() {
         await supabase.auth.signOut();

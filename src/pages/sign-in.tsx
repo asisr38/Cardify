@@ -4,19 +4,27 @@ import { ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useAuth } from '../hooks/use-auth';
+import { cn } from '../lib/utils';
 import { toast } from 'sonner';
 
+type Mode = 'magic' | 'password';
+type Phase = 'input' | 'sending' | 'sent' | 'confirm';
+
 export function SignIn() {
-  const { session, loading, signInWithMagicLink } = useAuth();
+  const { session, loading, signInWithMagicLink, signInWithPassword, signUpWithPassword } =
+    useAuth();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? '/';
 
+  const [mode, setMode] = useState<Mode>('magic');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
-  const [phase, setPhase] = useState<'input' | 'sending' | 'sent'>('input');
+  const [password, setPassword] = useState('');
+  const [phase, setPhase] = useState<Phase>('input');
 
   if (!loading && session) return <Navigate to={from} replace />;
 
-  const submit = async (e: React.FormEvent) => {
+  const submitMagic = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.includes('@')) {
       toast.error('Enter a valid email');
@@ -30,6 +38,44 @@ export function SignIn() {
       return;
     }
     setPhase('sent');
+  };
+
+  const submitPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.includes('@')) {
+      toast.error('Enter a valid email');
+      return;
+    }
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    setPhase('sending');
+    if (isSignUp) {
+      const { error, needsConfirmation } = await signUpWithPassword(email.trim(), password);
+      if (error) {
+        setPhase('input');
+        toast.error(error);
+        return;
+      }
+      if (needsConfirmation) {
+        setPhase('confirm');
+        return;
+      }
+      toast.success('Account created');
+    } else {
+      const { error } = await signInWithPassword(email.trim(), password);
+      if (error) {
+        setPhase('input');
+        toast.error(error);
+        return;
+      }
+    }
+  };
+
+  const resetToInput = () => {
+    setPhase('input');
+    setPassword('');
   };
 
   return (
@@ -62,33 +108,101 @@ export function SignIn() {
 
       <div className="mt-11">
         {phase === 'input' && (
-          <form onSubmit={submit} className="animate-fade-up">
-            <div className="label-eyebrow mb-2.5">Sign in with email</div>
-            <Input
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              placeholder="you@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoFocus
-              required
-              className="mb-2.5"
-            />
-            <Button type="submit" variant="gold" size="lg" className="w-full">
-              Send magic link <ArrowRight size={16} />
-            </Button>
-            <p className="mt-[18px] text-center text-xs leading-[1.7] text-muted-dim">
-              No password needed · GDPR compliant
-              <br />
-              Delete all your data anytime from Settings
-            </p>
-          </form>
+          <div className="animate-fade-up">
+            <div className="mb-4 inline-flex rounded-full border border-[hsl(40_54%_89%/0.08)] bg-card p-1 text-[12px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setMode('magic')}
+                className={cn(
+                  'rounded-full px-3.5 py-1.5 transition-colors',
+                  mode === 'magic' ? 'bg-gold text-background' : 'text-muted-foreground',
+                )}
+              >
+                Magic link
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('password')}
+                className={cn(
+                  'rounded-full px-3.5 py-1.5 transition-colors',
+                  mode === 'password' ? 'bg-gold text-background' : 'text-muted-foreground',
+                )}
+              >
+                Password
+              </button>
+            </div>
+
+            {mode === 'magic' ? (
+              <form onSubmit={submitMagic}>
+                <div className="label-eyebrow mb-2.5">Sign in with email</div>
+                <Input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoFocus
+                  required
+                  className="mb-2.5"
+                />
+                <Button type="submit" variant="gold" size="lg" className="w-full">
+                  Send magic link <ArrowRight size={16} />
+                </Button>
+                <p className="mt-[18px] text-center text-xs leading-[1.7] text-muted-dim">
+                  No password needed · GDPR compliant
+                  <br />
+                  Delete all your data anytime from Settings
+                </p>
+              </form>
+            ) : (
+              <form onSubmit={submitPassword}>
+                <div className="label-eyebrow mb-2.5">
+                  {isSignUp ? 'Create an account' : 'Sign in with password'}
+                </div>
+                <Input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoFocus
+                  required
+                  className="mb-2.5"
+                />
+                <Input
+                  type="password"
+                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                  placeholder={isSignUp ? 'Choose a password (6+ chars)' : 'Password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="mb-2.5"
+                />
+                <Button type="submit" variant="gold" size="lg" className="w-full">
+                  {isSignUp ? 'Create account' : 'Sign in'} <ArrowRight size={16} />
+                </Button>
+                <div className="mt-4 text-center text-xs text-muted-dim">
+                  {isSignUp ? 'Already have an account?' : 'New here?'}{' '}
+                  <button
+                    type="button"
+                    onClick={() => setIsSignUp((v) => !v)}
+                    className="text-gold underline-offset-2 hover:underline"
+                  >
+                    {isSignUp ? 'Sign in' : 'Create account'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         )}
 
         {phase === 'sending' && (
           <div className="animate-fade-in flex items-center justify-center gap-2 text-[15px] text-muted-foreground">
-            <Loader2 size={16} className="animate-spin" /> Sending link…
+            <Loader2 size={16} className="animate-spin" />{' '}
+            {mode === 'magic' ? 'Sending link…' : isSignUp ? 'Creating account…' : 'Signing in…'}
           </div>
         )}
 
@@ -103,9 +217,29 @@ export function SignIn() {
             </p>
             <button
               className="mt-6 text-xs text-muted-dim underline-offset-2 hover:underline"
-              onClick={() => setPhase('input')}
+              onClick={resetToInput}
             >
               Use a different email
+            </button>
+          </div>
+        )}
+
+        {phase === 'confirm' && (
+          <div className="animate-fade-up text-center">
+            <div className="mb-3.5 text-[44px]">📬</div>
+            <h2 className="mb-2 font-serif text-[22px]">Confirm your email</h2>
+            <p className="text-sm leading-[1.5] text-muted-foreground">
+              Confirmation link sent to
+              <br />
+              <span className="text-gold">{email}</span>
+              <br />
+              Click it to finish creating your account.
+            </p>
+            <button
+              className="mt-6 text-xs text-muted-dim underline-offset-2 hover:underline"
+              onClick={resetToInput}
+            >
+              Back
             </button>
           </div>
         )}
