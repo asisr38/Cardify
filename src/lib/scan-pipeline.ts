@@ -29,15 +29,20 @@ export async function runOcr(
 }
 
 export async function runStructure(
-  text: string,
+  frontText: string,
+  backText = '',
 ): Promise<{ contact: StructuredContact; source: StructureSource }> {
+  const request =
+    backText.trim().length > 0
+      ? { front_text: frontText, back_text: backText }
+      : { text: frontText };
   try {
-    const contact = await api.structure(text);
+    const contact = await api.structure(request);
     return { contact, source: 'cloud' };
   } catch (err) {
     // eslint-disable-next-line no-console
     console.info('[scan] /api/structure unavailable, falling back to regex:', err);
-    return { contact: structureLocal(text), source: 'local' };
+    return { contact: structureLocal([frontText, backText].filter(Boolean).join('\n')), source: 'local' };
   }
 }
 

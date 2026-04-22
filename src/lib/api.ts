@@ -35,6 +35,12 @@ async function authedPost<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
+export interface StructureRequest {
+  text?: string;
+  front_text?: string;
+  back_text?: string;
+}
+
 export type StructuredContact = Pick<
   ContactInsert,
   'full_name' | 'title' | 'company' | 'email' | 'phone' | 'website' | 'linkedin' | 'address'
@@ -42,6 +48,10 @@ export type StructuredContact = Pick<
 
 export const api = {
   ocr: (path: string) => authedPost<{ text: string }>('/api/ocr', { path }),
-  structure: (text: string) => authedPost<StructuredContact>('/api/structure', { text }),
+  structure: (input: string | StructureRequest) =>
+    authedPost<StructuredContact>(
+      '/api/structure',
+      typeof input === 'string' ? { text: input } : input,
+    ),
   transcribe: (path: string) => authedPost<{ transcript: string }>('/api/transcribe', { path }),
 };

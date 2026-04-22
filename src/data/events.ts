@@ -54,6 +54,26 @@ export function useEvents() {
   });
 }
 
+export function useActiveEvent() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['events', 'active', user?.id ?? 'none'],
+    enabled: !!user,
+    queryFn: async (): Promise<EventRow | null> => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('user_id', user!.id)
+        .eq('is_active', true)
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as EventRow | null;
+    },
+  });
+}
+
 export function useEvent(eventId: string | undefined) {
   const { user } = useAuth();
   return useQuery({

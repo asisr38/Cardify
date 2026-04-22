@@ -4,7 +4,7 @@ import { getBearerToken, getUserFromJwt } from './lib/auth.js';
 import { applyCors, handleOptions } from './lib/cors.js';
 import { readIntEnv, requireEnv, getSupabasePublicConfig } from './lib/env.js';
 import { readJsonBody, requireMethod, sendError, sendJson } from './lib/http.js';
-import { consumeQuota } from './lib/rate-limit.js';
+import { consumeQuota, refundQuota } from './lib/rate-limit.js';
 import { createSupabaseServiceClient } from './lib/supabase-admin.js';
 
 const MODEL = 'claude-haiku-4-5-20251001';
@@ -42,6 +42,27 @@ interface StructuredContact {
   address: string | null;
 }
 
+interface StructureBody {
+  text?: string;
+  front_text?: string;
+  back_text?: string;
+}
+
+function buildOcrPrompt(body: StructureBody): string {
+  const front = body.front_text?.trim() ?? '';
+  const back = body.back_text?.trim() ?? '';
+  const single = body.text?.trim() ?? '';
+
+  if (front || back) {
+    const sections = [];
+    if (front) sections.push(`Front OCR:\n${front}`);
+    if (back) sections.push(`Back OCR:\n${back}`);
+    return sections.join('\n\n');
+  }
+
+  return single;
+}
+
 function parseJsonLoose(raw: string): StructuredContact {
   const trimmed = raw.trim();
   const start = trimmed.indexOf('{');
@@ -65,6 +86,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return void handleOptions(res);
   if (!requireMethod(req, res, 'POST')) return;
 
+  let quotaConsumed = false;
+  let quotaUserId: string | null = null;
+
   try {
     const { url, anonKey } = getSupabasePublicConfig();
     const token = getBearerToken(req.headers.authorization);
@@ -73,18 +97,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { user } = await getUserFromJwt(url, anonKey, token);
     if (!user) return sendError(res, 401, 'Invalid session');
 
-    const { text } = readJsonBody<{ text?: string }>(req);
-    if (!text) return sendError(res, 400, 'text is required');
+    const body = readJsonBody<StructureBody>(req);
+    const text = buildOcrPrompt(body);
+    if (!text) return sendError(res, 400, 'front_text, back_text, or text is required');
     if (text.length > 8000) return sendError(res, 400, 'text too long');
 
     const admin = createSupabaseServiceClient(url);
+    const anthropic = new Anthropic({ apiKey: requireEnv('ANTHROPIC_API_KEY') });
     const cap = readIntEnv('STRUCTURE_DAILY_LIMIT', 100);
     const quota = await consumeQuota(admin, user.id, 'structure', cap);
     if (!quota.allowed) {
       return sendError(res, 429, `Daily structure limit reached (${cap}). Try again tomorrow.`, 'rate_limited');
     }
+    quotaConsumed = true;
+    quotaUserId = user.id;
 
-    const anthropic = new Anthropic({ apiKey: requireEnv('ANTHROPIC_API_KEY') });
     const msg = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 600,
@@ -98,6 +125,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     applyCors(res);
     return sendJson(res, 200, parseJsonLoose(block.text));
   } catch (err) {
+    if (quotaConsumed && quotaUserId) {
+      try {
+        const { url } = getSupabasePublicConfig();
+        const admin = createSupabaseServiceClient(url);
+        await refundQuota(admin, quotaUserId, 'structure');
+      } catch {
+        // Best-effort refund only.
+      }
+    }
     // eslint-disable-next-line no-console
     console.error('[api/structure]', err);
     return sendError(res, 500, err instanceof Error ? err.message : 'Unexpected error');

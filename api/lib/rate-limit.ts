@@ -33,3 +33,18 @@ export const consumeQuota = async (
 
   return { allowed: row.allowed, count: row.count };
 };
+
+export const refundQuota = async (
+  admin: SupabaseClient,
+  userId: string,
+  endpoint: 'ocr' | 'structure' | 'transcribe',
+): Promise<void> => {
+  const { error } = await admin.rpc('refund_api_quota', {
+    p_user_id: userId,
+    p_endpoint: endpoint,
+  });
+
+  if (error) {
+    throw error;
+  }
+};

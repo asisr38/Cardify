@@ -3,7 +3,7 @@ import { getBearerToken, getUserFromJwt } from './lib/auth.js';
 import { applyCors, handleOptions } from './lib/cors.js';
 import { readIntEnv, requireEnv, getSupabasePublicConfig } from './lib/env.js';
 import { readJsonBody, requireMethod, sendError, sendJson } from './lib/http.js';
-import { consumeQuota } from './lib/rate-limit.js';
+import { consumeQuota, refundQuota } from './lib/rate-limit.js';
 import { createSupabaseServiceClient } from './lib/supabase-admin.js';
 
 const BUCKET = 'card-scans';
@@ -12,6 +12,9 @@ const BUCKET = 'card-scans';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return void handleOptions(res);
   if (!requireMethod(req, res, 'POST')) return;
+
+  let quotaConsumed = false;
+  let quotaUserId: string | null = null;
 
   try {
     const { url, anonKey } = getSupabasePublicConfig();
@@ -28,12 +31,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const admin = createSupabaseServiceClient(url);
 
-    const cap = readIntEnv('OCR_DAILY_LIMIT', 100);
-    const quota = await consumeQuota(admin, user.id, 'ocr', cap);
-    if (!quota.allowed) {
-      return sendError(res, 429, `Daily OCR limit reached (${cap}). Try again tomorrow.`, 'rate_limited');
-    }
-
     const { data: blob, error: dlErr } = await admin.storage.from(BUCKET).download(path);
     if (dlErr || !blob) return sendError(res, 400, `Could not read scan: ${dlErr?.message ?? 'not found'}`);
 
@@ -44,6 +41,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const base64 = bytes.toString('base64');
 
     const apiKey = requireEnv('GOOGLE_VISION_API_KEY');
+    const cap = readIntEnv('OCR_DAILY_LIMIT', 100);
+    const quota = await consumeQuota(admin, user.id, 'ocr', cap);
+    if (!quota.allowed) {
+      return sendError(res, 429, `Daily OCR limit reached (${cap}). Try again tomorrow.`, 'rate_limited');
+    }
+    quotaConsumed = true;
+    quotaUserId = user.id;
+
     const visionRes = await fetch(
       `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
       {
@@ -75,6 +80,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     applyCors(res);
     return sendJson(res, 200, { text: first?.fullTextAnnotation?.text ?? '' });
   } catch (err) {
+    if (quotaConsumed && quotaUserId) {
+      try {
+        const { url } = getSupabasePublicConfig();
+        const admin = createSupabaseServiceClient(url);
+        await refundQuota(admin, quotaUserId, 'ocr');
+      } catch {
+        // Best-effort refund only.
+      }
+    }
     // eslint-disable-next-line no-console
     console.error('[api/ocr]', err);
     return sendError(res, 500, err instanceof Error ? err.message : 'Unexpected error');

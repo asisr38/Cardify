@@ -15,7 +15,7 @@ import {
 } from '../components/contact-form';
 import { useAuth } from '../hooks/use-auth';
 import { useCreateContact } from '../data/contacts';
-import { useEvent } from '../data/events';
+import { useActiveEvent, useEvent } from '../data/events';
 import { runOcr, runStructure, runTranscribe } from '../lib/scan-pipeline';
 import { compressImage, randomId, uploadCardScan, uploadVoiceNote } from '../lib/storage';
 import type { VoiceRecordingResult } from '../components/voice-recorder';
@@ -28,6 +28,8 @@ interface Pipeline {
   frontPath: string | null;
   backPath: string | null;
   voicePath: string | null;
+  frontText: string;
+  backText: string;
   ocrState: 'idle' | 'running' | 'done' | 'error';
   ocrError: string | null;
   voiceState: 'idle' | 'running' | 'done' | 'error';
@@ -39,6 +41,8 @@ const initialPipeline: Pipeline = {
   frontPath: null,
   backPath: null,
   voicePath: null,
+  frontText: '',
+  backText: '',
   ocrState: 'idle',
   ocrError: null,
   voiceState: 'idle',
@@ -46,10 +50,13 @@ const initialPipeline: Pipeline = {
 };
 
 export function Scan() {
-  const { eventId } = useParams<{ eventId: string }>();
+  const { eventId: routeEventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: event } = useEvent(eventId);
+  const { data: routeEvent } = useEvent(routeEventId);
+  const { data: activeEvent } = useActiveEvent();
+  const resolvedEvent = routeEventId ? routeEvent : activeEvent;
+  const resolvedEventId = routeEventId ? routeEvent?.id : activeEvent?.id;
   const createContact = useCreateContact();
 
   const [step, setStep] = useState<Step>('front');
@@ -62,9 +69,13 @@ export function Scan() {
   // Merge any new structured fields from OCR, but don't overwrite anything
   // the user has already typed in review.
   const formRef = useRef(form);
+  const pipelineRef = useRef(pipeline);
   useEffect(() => {
     formRef.current = form;
   }, [form]);
+  useEffect(() => {
+    pipelineRef.current = pipeline;
+  }, [pipeline]);
 
   const processingBanner = useMemo(() => {
     if (pipeline.ocrState === 'running') return 'Reading the card…';
@@ -72,11 +83,25 @@ export function Scan() {
     return null;
   }, [pipeline.ocrState, pipeline.voiceState]);
 
-  const runOcrPipeline = async (compressedBlob: Blob, path: string) => {
+  const runOcrPipeline = async (
+    side: 'front' | 'back',
+    compressedBlob: Blob,
+    path: string,
+  ) => {
     setPipeline((p) => ({ ...p, ocrState: 'running', ocrError: null }));
     try {
       const { text } = await runOcr(compressedBlob, path);
-      if (!text.trim()) {
+      const latest = pipelineRef.current;
+      const frontText = side === 'front' ? text.trim() : latest.frontText;
+      const backText = side === 'back' ? text.trim() : latest.backText;
+
+      setPipeline((p) => ({
+        ...p,
+        frontText: side === 'front' ? text.trim() : p.frontText,
+        backText: side === 'back' ? text.trim() : p.backText,
+      }));
+
+      if (!frontText && !backText) {
         setPipeline((p) => ({
           ...p,
           ocrState: 'error',
@@ -84,7 +109,7 @@ export function Scan() {
         }));
         return;
       }
-      const { contact } = await runStructure(text);
+      const { contact } = await runStructure(frontText, backText);
       setForm((prev) => mergeFromOcr(prev, contact));
       setPipeline((p) => ({ ...p, ocrState: 'done' }));
     } catch (err) {
@@ -114,12 +139,9 @@ export function Scan() {
     setStep('back');
     try {
       const compressed = await compressImage(blob);
-      // Kick OCR off against the local blob immediately — don't wait for
-      // the Storage upload to finish before Tesseract/Vision can start.
-      const ocrTask = runOcrPipeline(compressed, `${user.id}/${pipeline.scanId}/front.jpg`);
       const path = await uploadCardScan(user.id, pipeline.scanId, 'front', compressed);
       setPipeline((p) => ({ ...p, frontPath: path }));
-      await ocrTask;
+      void runOcrPipeline('front', compressed, path);
     } catch (err) {
       toast.error(errorMessage(err));
     }
@@ -132,6 +154,7 @@ export function Scan() {
       const compressed = await compressImage(blob);
       const path = await uploadCardScan(user.id, pipeline.scanId, 'back', compressed);
       setPipeline((p) => ({ ...p, backPath: path }));
+      void runOcrPipeline('back', compressed, path);
     } catch (err) {
       toast.error(`Back upload failed: ${errorMessage(err)}`);
     }
@@ -156,12 +179,20 @@ export function Scan() {
       toast.error('Name is required');
       return;
     }
-    if (!user || !eventId) return;
+    if (!user) {
+      toast.error('Not signed in');
+      return;
+    }
+    if (!resolvedEventId) {
+      toast.error(routeEventId ? 'This event could not be loaded.' : 'No active event. Pick or create one first.');
+      navigate('/events');
+      return;
+    }
     try {
       const patch = formToInsertPatch(form);
       const contact = await createContact.mutateAsync({
         ...patch,
-        event_id: eventId,
+        event_id: resolvedEventId,
         front_image_url: pipeline.frontPath,
         back_image_url: pipeline.backPath,
         voice_note_url: pipeline.voicePath,
@@ -273,11 +304,11 @@ export function Scan() {
       )}
 
       <section className="px-5">
-        {event && (
+        {resolvedEvent && (
           <div className="mb-4 flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 shadow-soft">
             <div>
               <div className="label-eyebrow">Saving to</div>
-              <div className="mt-0.5 text-sm font-medium">{event.name}</div>
+              <div className="mt-0.5 text-sm font-medium">{resolvedEvent.name}</div>
             </div>
           </div>
         )}
