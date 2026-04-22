@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2, Plus, Trash2, X } from 'lucide-react';
+import { Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -10,15 +10,23 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../components/ui/sheet';
-import { useTemplates, useCreateTemplate, useDeleteTemplate } from '../data/templates';
+import {
+  useTemplates,
+  useCreateTemplate,
+  useDeleteTemplate,
+  useUpdateTemplate,
+} from '../data/templates';
 import { errorMessage } from '../lib/utils';
 import { toast } from 'sonner';
+import type { EmailTemplateRow } from '../types/database';
 
 export function Templates() {
   const { data: templates, isLoading, isError, error } = useTemplates();
   const createTemplate = useCreateTemplate();
+  const updateTemplate = useUpdateTemplate();
   const deleteTemplate = useDeleteTemplate();
   const [newOpen, setNewOpen] = useState(false);
+  const [editing, setEditing] = useState<EmailTemplateRow | null>(null);
   const [draft, setDraft] = useState({ name: '', subject: '', body: '' });
 
   const save = async () => {
@@ -27,9 +35,15 @@ export function Templates() {
       return;
     }
     try {
-      await createTemplate.mutateAsync(draft);
-      toast.success('Template saved');
+      if (editing) {
+        await updateTemplate.mutateAsync({ id: editing.id, patch: draft });
+        toast.success('Template updated');
+      } else {
+        await createTemplate.mutateAsync(draft);
+        toast.success('Template saved');
+      }
       setDraft({ name: '', subject: '', body: '' });
+      setEditing(null);
       setNewOpen(false);
     } catch (err) {
       toast.error(errorMessage(err));
@@ -65,21 +79,34 @@ export function Templates() {
           >
             <div className="mb-1 flex items-start justify-between gap-2">
               <div className="text-[14px] font-semibold text-foreground">{t.name}</div>
-              <button
-                onClick={async () => {
-                  if (!confirm(`Delete "${t.name}"?`)) return;
-                  try {
-                    await deleteTemplate.mutateAsync(t.id);
-                    toast.success('Deleted');
-                  } catch (err) {
-                    toast.error(errorMessage(err));
-                  }
-                }}
-                className="text-muted-dim hover:text-destructive"
-                aria-label="Delete template"
-              >
-                <Trash2 size={14} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    setEditing(t);
+                    setDraft({ name: t.name, subject: t.subject, body: t.body });
+                    setNewOpen(true);
+                  }}
+                  className="text-muted-dim hover:text-foreground"
+                  aria-label="Edit template"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm(`Delete "${t.name}"?`)) return;
+                    try {
+                      await deleteTemplate.mutateAsync(t.id);
+                      toast.success('Deleted');
+                    } catch (err) {
+                      toast.error(errorMessage(err));
+                    }
+                  }}
+                  className="text-muted-dim hover:text-destructive"
+                  aria-label="Delete template"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
             <div className="mb-1.5 text-[12px] italic text-gold">"{t.subject}"</div>
             <div className="text-[12px] leading-[1.5] text-muted-dim line-clamp-3 whitespace-pre-wrap">
@@ -99,17 +126,30 @@ export function Templates() {
         )}
 
         <button
-          onClick={() => setNewOpen(true)}
+          onClick={() => {
+            setEditing(null);
+            setDraft({ name: '', subject: '', body: '' });
+            setNewOpen(true);
+          }}
           className="flex items-center justify-center gap-2 rounded-[14px] border border-dashed border-[hsl(40_54%_89%/0.12)] p-3.5 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold"
         >
           <Plus size={16} /> New Template
         </button>
       </section>
 
-      <Sheet open={newOpen} onOpenChange={setNewOpen}>
+      <Sheet
+        open={newOpen}
+        onOpenChange={(open) => {
+          setNewOpen(open);
+          if (!open) {
+            setEditing(null);
+            setDraft({ name: '', subject: '', body: '' });
+          }
+        }}
+      >
         <SheetContent side="bottom" className="max-h-[86vh] overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>New template</SheetTitle>
+            <SheetTitle>{editing ? 'Edit template' : 'New template'}</SheetTitle>
             <SheetDescription>
               Use <code className="text-gold">{'{first_name}'}</code>,{' '}
               <code className="text-gold">{'{event}'}</code>, and{' '}
@@ -147,16 +187,29 @@ export function Templates() {
           </div>
 
           <div className="mt-5 flex gap-2">
-            <Button variant="ghost" className="flex-1" onClick={() => setNewOpen(false)}>
+            <Button
+              variant="ghost"
+              className="flex-1"
+              onClick={() => {
+                setNewOpen(false);
+                setEditing(null);
+              }}
+            >
               <X size={14} /> Cancel
             </Button>
             <Button
               variant="gold"
               className="flex-1"
               onClick={save}
-              disabled={createTemplate.isPending}
+              disabled={createTemplate.isPending || updateTemplate.isPending}
             >
-              {createTemplate.isPending ? <Loader2 className="animate-spin" /> : 'Save'}
+              {createTemplate.isPending || updateTemplate.isPending ? (
+                <Loader2 className="animate-spin" />
+              ) : editing ? (
+                'Update'
+              ) : (
+                'Save'
+              )}
             </Button>
           </div>
         </SheetContent>

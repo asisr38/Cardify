@@ -42,4 +42,8 @@ export const keys = {
     all: ['templates'] as const,
     list: () => [...keys.templates.all, 'list'] as const,
   },
+  gmail: {
+    all: ['gmail'] as const,
+    status: () => [...keys.gmail.all, 'status'] as const,
+  },
 };

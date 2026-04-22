@@ -54,4 +54,13 @@ export const api = {
       typeof input === 'string' ? { text: input } : input,
     ),
   transcribe: (path: string) => authedPost<{ transcript: string }>('/api/transcribe', { path }),
+  gmailConnect: (returnTo: string) => authedPost<{ authUrl: string }>('/api/gmail-connect', { returnTo }),
+  gmailDisconnect: () => authedPost<{ ok: true }>('/api/gmail-disconnect', {}),
+  gmailSend: (input: { contactId: string; subject: string; body: string }) =>
+    authedPost<{
+      messageId: string;
+      renderedSubject: string;
+      renderedBody: string;
+      sentToday: number;
+    }>('/api/gmail-send', input),
 };

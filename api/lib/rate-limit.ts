@@ -6,10 +6,12 @@ type QuotaRpcRow = {
   error?: string;
 };
 
+export type ApiQuotaEndpoint = 'ocr' | 'structure' | 'transcribe' | 'gmail_send';
+
 export const consumeQuota = async (
   admin: SupabaseClient,
   userId: string,
-  endpoint: 'ocr' | 'structure' | 'transcribe',
+  endpoint: ApiQuotaEndpoint,
   cap: number,
 ): Promise<{ allowed: boolean; count: number }> => {
   const { data, error } = await admin.rpc('try_consume_api_quota', {
@@ -37,7 +39,7 @@ export const consumeQuota = async (
 export const refundQuota = async (
   admin: SupabaseClient,
   userId: string,
-  endpoint: 'ocr' | 'structure' | 'transcribe',
+  endpoint: ApiQuotaEndpoint,
 ): Promise<void> => {
   const { error } = await admin.rpc('refund_api_quota', {
     p_user_id: userId,

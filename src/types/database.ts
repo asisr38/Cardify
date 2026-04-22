@@ -103,3 +103,11 @@ export type EmailTemplateInsert = Pick<EmailTemplateRow, 'name' | 'subject' | 'b
 export type EmailTemplateUpdate = Partial<
   Pick<EmailTemplateRow, 'name' | 'subject' | 'body' | 'is_default'>
 >;
+
+export interface GmailAccountStatusRow {
+  user_id: string;
+  google_email: string;
+  scope: string;
+  connected_at: string;
+  sent_today: number;
+}

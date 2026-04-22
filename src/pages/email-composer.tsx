@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { ArrowRight, Link2, Loader2, Sparkles } from 'lucide-react';
 import { ScreenBack } from '../components/screen-back';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
-import { useContact, useSetFollowUpStatus } from '../data/contacts';
+import { useContact } from '../data/contacts';
 import { useEvent } from '../data/events';
-import { useTemplates, useCreateTemplate } from '../data/templates';
-import { useCreateInteraction } from '../data/interactions';
-import { cn, errorMessage, firstName } from '../lib/utils';
+import { useTemplates } from '../data/templates';
+import { useGmailConnection, useSendGmailMessage } from '../data/gmail';
+import { renderEmailTemplate } from '../lib/email-merge';
+import { cn, errorMessage } from '../lib/utils';
 import { toast } from 'sonner';
 import type { EmailTemplateRow } from '../types/database';
 
@@ -42,9 +43,8 @@ export function EmailComposer() {
   const { data: contact, isLoading } = useContact(contactId);
   const { data: event } = useEvent(contact?.event_id ?? undefined);
   const { data: userTemplates } = useTemplates();
-  const createInteraction = useCreateInteraction();
-  const createTemplate = useCreateTemplate();
-  const setStatus = useSetFollowUpStatus();
+  const { data: gmail } = useGmailConnection();
+  const sendEmail = useSendGmailMessage();
 
   const templates = useMemo(() => {
     if (userTemplates && userTemplates.length > 0) return userTemplates;
@@ -63,8 +63,14 @@ export function EmailComposer() {
   useEffect(() => {
     const tmpl = templates.find((t) => t.id === tmplId);
     if (!tmpl || !contact) return;
-    setSubject(resolve(tmpl.subject, contact, event?.name ?? null));
-    setBody(resolve(tmpl.body, contact, event?.name ?? null));
+    const rendered = renderEmailTemplate({
+      subject: tmpl.subject,
+      body: tmpl.body,
+      contact,
+      eventName: event?.name ?? null,
+    });
+    setSubject(rendered.subject);
+    setBody(rendered.body);
   }, [tmplId, contact, event, templates]);
 
   if (isLoading) {
@@ -97,29 +103,13 @@ export function EmailComposer() {
       return;
     }
     try {
-      await createInteraction.mutateAsync({
-        contact_id: contact.id,
-        type: 'email_sent',
+      const result = await sendEmail.mutateAsync({
+        contactId: contact.id,
         subject,
         body,
       });
-      await setStatus.mutateAsync({ id: contact.id, status: 'sent' });
-      // Persist a user template the first time they compose, so future
-      // sessions have a real one to load instead of the fallback.
-      if (!userTemplates || userTemplates.length === 0) {
-        const tmpl = templates.find((t) => t.id === tmplId);
-        if (tmpl) {
-          try {
-            await createTemplate.mutateAsync({
-              name: tmpl.name,
-              subject: tmpl.subject,
-              body: tmpl.body,
-            });
-          } catch {
-            /* non-critical */
-          }
-        }
-      }
+      setSubject(result.renderedSubject);
+      setBody(result.renderedBody);
       setSent(true);
       setTimeout(() => navigate(`/contacts/${contact.id}`), 1800);
     } catch (err) {
@@ -134,7 +124,7 @@ export function EmailComposer() {
         <h2 className="mb-2 font-serif text-[24px] font-bold">Email sent!</h2>
         <p className="text-sm text-muted-foreground">Delivered to {contact.full_name}</p>
         <div className="mt-4 rounded-xl bg-card px-4 py-2 text-[11px] text-muted-dim">
-          Logged as activity
+          Logged as activity in Gmail + CardVault
         </div>
       </div>
     );
@@ -153,6 +143,11 @@ export function EmailComposer() {
       </header>
 
       <section className="px-5 pb-3">
+        {!gmail && (
+          <div className="mb-3 rounded-xl border border-gold/30 px-3.5 py-3 text-sm text-muted-foreground" style={{ background: 'hsl(var(--gold-glow))' }}>
+            Connect Gmail in Settings before sending follow-ups from your own account.
+          </div>
+        )}
         <div className="label-eyebrow mb-2">Template</div>
         <div className="flex flex-wrap gap-[7px]">
           {templates.map((t) => (
@@ -197,39 +192,33 @@ export function EmailComposer() {
 
       <div className="border-t border-[hsl(40_54%_89%/0.08)] px-5 pb-8 pt-3">
         <div className="mb-2 flex justify-end">
-          <span className="text-[11px] text-muted-dim">Via your email · 1 of 50 today</span>
+          <span className="text-[11px] text-muted-dim">
+            {gmail ? `Via ${gmail.google_email} · ${gmail.sent_today} of 50 today` : 'Gmail not connected'}
+          </span>
         </div>
-        <Button
-          variant="gold"
-          size="lg"
-          className="w-full"
-          onClick={send}
-          disabled={createInteraction.isPending || !contact.email}
-        >
-          {createInteraction.isPending ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <>
-              Send email <ArrowRight size={16} />
-            </>
-          )}
-        </Button>
+        {gmail ? (
+          <Button
+            variant="gold"
+            size="lg"
+            className="w-full"
+            onClick={send}
+            disabled={sendEmail.isPending || !contact.email}
+          >
+            {sendEmail.isPending ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <>
+                Send email <ArrowRight size={16} />
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button variant="outline" size="lg" className="w-full" onClick={() => navigate('/settings')}>
+            <Link2 size={16} />
+            Connect Gmail to send
+          </Button>
+        )}
       </div>
     </div>
   );
-}
-
-function resolve(
-  str: string,
-  contact: { full_name: string; company: string | null; voice_note_transcript: string | null },
-  eventName: string | null,
-): string {
-  const snippet = contact.voice_note_transcript
-    ? contact.voice_note_transcript.slice(0, 55) + '…'
-    : 'your goals';
-  return str
-    .replace(/\{first_name\}/g, firstName(contact.full_name))
-    .replace(/\{event\}/g, eventName ?? 'our recent meeting')
-    .replace(/\{company\}/g, contact.company ?? 'your team')
-    .replace(/\{voice_note_snippet\}/g, snippet);
 }
