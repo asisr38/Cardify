@@ -25,8 +25,8 @@ export default defineConfig(({ mode }) => {
         registerType: 'prompt',
         includeAssets: ['favicon-32.png', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
-          name: 'CardVault',
-          short_name: 'CardVault',
+          name: 'Cardify',
+          short_name: 'Cardify',
           description: 'Scan cards, build relationships, never lose a connection.',
           theme_color: '#0B0907',
           background_color: '#0B0907',

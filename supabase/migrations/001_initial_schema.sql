@@ -1,4 +1,4 @@
--- CardVault — initial schema, RLS, triggers, and default-template seeding.
+-- Cardify — initial schema, RLS, triggers, and default-template seeding.
 -- Idempotent: safe to re-run.
 
 -- ─────────────────────────────────────────────────────────────────────

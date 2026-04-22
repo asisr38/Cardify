@@ -140,7 +140,7 @@ export function Settings() {
         </Button>
 
         <p className="pt-4 text-center text-xs text-muted-dim">
-          CardVault · v0.1
+          Cardify · v0.1
         </p>
       </section>
     </div>

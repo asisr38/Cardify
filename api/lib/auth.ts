@@ -1,5 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
 export const getBearerToken = (authorization: string | undefined): string | null => {
   if (!authorization) {
     return null;
@@ -16,12 +14,27 @@ export const getUserFromJwt = async (
   supabaseAnonKey: string,
   jwt: string,
 ) => {
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
+  const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: supabaseAnonKey,
+      authorization: `Bearer ${jwt}`,
+    },
   });
-  const { data, error } = await supabase.auth.getUser(jwt);
-  if (error || !data.user) {
-    return { user: null as null | { id: string; email?: string }, error };
+
+  if (!res.ok) {
+    return {
+      user: null as null | { id: string; email?: string },
+      error: new Error(`Auth user lookup failed (${res.status})`),
+    };
   }
-  return { user: data.user, error: null };
+
+  const user = (await res.json()) as { id?: string; email?: string } | null;
+  if (!user?.id) {
+    return {
+      user: null as null | { id: string; email?: string },
+      error: new Error('Auth user lookup returned no user'),
+    };
+  }
+
+  return { user: { id: user.id, email: user.email }, error: null };
 };

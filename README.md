@@ -1,4 +1,4 @@
-# CardVault
+# Cardify
 
 Production build. Organize the people you meet — by the rooms where you met them.
 

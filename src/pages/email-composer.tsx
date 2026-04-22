@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import type { EmailTemplateRow } from '../types/database';
 
 // Fallback templates used when the user has not created any of their own yet.
-// Mirrors the three quick options from the CardVault design.
+// Mirrors the three quick options from the Cardify design.
 const FALLBACK_TEMPLATES: Pick<EmailTemplateRow, 'id' | 'name' | 'subject' | 'body'>[] = [
   {
     id: 'conference-followup',
@@ -124,7 +124,7 @@ export function EmailComposer() {
         <h2 className="mb-2 font-serif text-[24px] font-bold">Email sent!</h2>
         <p className="text-sm text-muted-foreground">Delivered to {contact.full_name}</p>
         <div className="mt-4 rounded-xl bg-card px-4 py-2 text-[11px] text-muted-dim">
-          Logged as activity in Gmail + CardVault
+          Logged as activity in Gmail + Cardify
         </div>
       </div>
     );

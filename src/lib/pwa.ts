@@ -11,7 +11,7 @@ export function registerServiceWorker() {
   const updateSW = registerSW({
     onNeedRefresh() {
       toast('Update available', {
-        description: 'A new version of CardVault is ready.',
+        description: 'A new version of Cardify is ready.',
         duration: Infinity,
         action: {
           label: 'Reload',

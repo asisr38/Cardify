@@ -98,7 +98,7 @@ export function SignIn() {
             <rect x="21" y="3.5" width="5.5" height="5.5" rx="1.2" fill="hsl(var(--gold))" opacity="0.2" />
           </svg>
         </div>
-        <h1 className="mb-2.5 font-serif text-[38px] font-bold leading-none tracking-tight">CardVault</h1>
+        <h1 className="mb-2.5 font-serif text-[38px] font-bold leading-none tracking-tight">Cardify</h1>
         <p className="max-w-[24ch] text-[15px] leading-[1.55] text-muted-foreground">
           Scan cards. Build relationships.
           <br />

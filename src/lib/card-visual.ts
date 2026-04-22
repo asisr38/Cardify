@@ -1,6 +1,6 @@
 // Derive a deterministic card palette from a contact's name so every contact
 // gets a distinct "business card" thumbnail in the grid, even when the DB has
-// no card image or accent on file. Five bespoke palettes match the CardVault
+// no card image or accent on file. Five bespoke palettes match the Cardify
 // mock (Meridian navy, Vaulto ink, Kestrel plum, Ironclad forest, etc.).
 
 export interface CardPalette {
@@ -27,5 +27,5 @@ function hash(str: string): number {
 }
 
 export function cardPalette(seed: string): CardPalette {
-  return PALETTES[hash(seed || 'cardvault') % PALETTES.length];
+  return PALETTES[hash(seed || 'cardify') % PALETTES.length];
 }
