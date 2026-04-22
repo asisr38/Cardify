@@ -120,7 +120,7 @@ export async function exchangeGoogleCode(req: VercelRequest, code: string) {
     throw new Error(json.error_description || json.error || 'Could not exchange Google auth code');
   }
 
-  return json;
+  return json as { access_token: string; refresh_token?: string; scope?: string };
 }
 
 export async function refreshGoogleAccessToken(refreshToken: string) {
