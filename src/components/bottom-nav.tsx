@@ -17,11 +17,13 @@ export function BottomNav() {
 
   return (
     <nav
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-card"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="pointer-events-auto mx-auto max-w-[430px] border-t border-[hsl(40_54%_89%/0.08)] bg-card">
-        <div className="flex items-stretch px-2 pb-6 pt-2">
+        <div
+          className="flex items-stretch px-2 pb-2 pt-2"
+        >
           {items.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}

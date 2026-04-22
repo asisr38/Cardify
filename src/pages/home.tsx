@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Scan as ScanIcon, MapPin, Sparkles } from 'lucide-react';
+import { Download, Loader2, Scan as ScanIcon, MapPin, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 import { CardThumbnail } from '../components/card-thumbnail';
 import { StatusBadge } from '../components/status-badge';
 import { useContacts } from '../data/contacts';
 import { useEvents } from '../data/events';
+import { exportContactsToExcel } from '../lib/export';
 import { errorMessage, formatDate } from '../lib/utils';
 import { useAuth } from '../hooks/use-auth';
 import { cn } from '../lib/utils';
@@ -19,6 +21,23 @@ export function Home() {
   const { data: events } = useEvents();
 
   const [filter, setFilter] = useState<Filter>('all');
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!contacts || contacts.length === 0) {
+      toast.error('No contacts to export yet');
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportContactsToExcel(contacts, events ?? []);
+      toast.success(`Exported ${contacts.length} contacts`);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const activeEvent = events?.find((e) => e.is_active);
   const pending = useMemo(
@@ -41,9 +60,20 @@ export function Home() {
         <p className="text-[13px] text-muted-foreground">
           {greeting}, <span className="text-foreground">{name}</span>
         </p>
-        <h1 className="mb-4 mt-[3px] font-serif text-[30px] font-bold leading-[1.1] tracking-tight">
-          Your Contacts
-        </h1>
+        <div className="mb-4 mt-[3px] flex items-end justify-between gap-3">
+          <h1 className="font-serif text-[30px] font-bold leading-[1.1] tracking-tight">
+            Your Contacts
+          </h1>
+          <button
+            onClick={handleExport}
+            disabled={exporting || !contacts || contacts.length === 0}
+            aria-label="Export contacts to Excel"
+            className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-card px-3 py-1.5 text-[11px] font-semibold text-gold transition-colors hover:bg-gold/10 disabled:opacity-50"
+          >
+            {exporting ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+            Export
+          </button>
+        </div>
 
         {activeEvent && (
           <button
