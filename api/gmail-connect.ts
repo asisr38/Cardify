@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getBearerToken, getUserFromJwt } from './lib/auth.js';
-import { handleOptions } from './lib/cors.js';
-import { getSupabasePublicConfig } from './lib/env.js';
-import { readJsonBody, requireMethod, sendError, sendJson } from './lib/http.js';
-import { buildGoogleConsentUrl, createOAuthState } from './lib/google.js';
+import { getBearerToken, getUserFromJwt } from './_lib/auth.js';
+import { handleOptions } from './_lib/cors.js';
+import { getSupabasePublicConfig } from './_lib/env.js';
+import { readJsonBody, requireMethod, sendError, sendJson } from './_lib/http.js';
+import { buildGoogleConsentUrl, createOAuthState } from './_lib/google.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return void handleOptions(res);

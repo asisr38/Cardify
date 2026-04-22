@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { exchangeGoogleCode, fetchGoogleUserEmail, getRequestOrigin, verifyOAuthState } from './lib/google.js';
-import { createSupabaseServiceClient } from './lib/supabase-admin.js';
-import { getSupabasePublicConfig } from './lib/env.js';
+import { exchangeGoogleCode, fetchGoogleUserEmail, getRequestOrigin, verifyOAuthState } from './_lib/google.js';
+import { createSupabaseServiceClient } from './_lib/supabase-admin.js';
+import { getSupabasePublicConfig } from './_lib/env.js';
 
 function redirect(res: VercelResponse, location: string) {
   res.writeHead(302, { Location: location });

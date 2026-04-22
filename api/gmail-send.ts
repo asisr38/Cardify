@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getBearerToken, getUserFromJwt } from './lib/auth.js';
-import { handleOptions } from './lib/cors.js';
-import { getSupabasePublicConfig, readIntEnv } from './lib/env.js';
-import { encodeMimeMessage, refreshGoogleAccessToken } from './lib/google.js';
-import { readJsonBody, requireMethod, sendError, sendJson } from './lib/http.js';
-import { consumeQuota, refundQuota, type ApiQuotaEndpoint } from './lib/rate-limit.js';
-import { createSupabaseServiceClient } from './lib/supabase-admin.js';
+import { getBearerToken, getUserFromJwt } from './_lib/auth.js';
+import { handleOptions } from './_lib/cors.js';
+import { getSupabasePublicConfig, readIntEnv } from './_lib/env.js';
+import { encodeMimeMessage, refreshGoogleAccessToken } from './_lib/google.js';
+import { readJsonBody, requireMethod, sendError, sendJson } from './_lib/http.js';
+import { consumeQuota, refundQuota, type ApiQuotaEndpoint } from './_lib/rate-limit.js';
+import { createSupabaseServiceClient } from './_lib/supabase-admin.js';
 import { renderEmailTemplate } from '../src/lib/email-merge.js';
 
 interface SendBody {

@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
-import { getBearerToken, getUserFromJwt } from './lib/auth.js';
-import { applyCors, handleOptions } from './lib/cors.js';
-import { readIntEnv, requireEnv, getSupabasePublicConfig } from './lib/env.js';
-import { readJsonBody, requireMethod, sendError, sendJson } from './lib/http.js';
-import { consumeQuota, refundQuota } from './lib/rate-limit.js';
-import { createSupabaseServiceClient } from './lib/supabase-admin.js';
+import { getBearerToken, getUserFromJwt } from './_lib/auth.js';
+import { applyCors, handleOptions } from './_lib/cors.js';
+import { readIntEnv, requireEnv, getSupabasePublicConfig } from './_lib/env.js';
+import { readJsonBody, requireMethod, sendError, sendJson } from './_lib/http.js';
+import { consumeQuota, refundQuota } from './_lib/rate-limit.js';
+import { createSupabaseServiceClient } from './_lib/supabase-admin.js';
 
 const BUCKET = 'voice-notes';
 const MAX_BYTES = 10 * 1024 * 1024;
